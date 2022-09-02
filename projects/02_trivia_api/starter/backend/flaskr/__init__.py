@@ -35,8 +35,6 @@ def create_app(test_config=None):
   @app.route('/categories')
   def get_categories():
     categories = Category.query.order_by(Category.id).all()
-    if len(categories) == 0:
-      abort(404)
     return jsonify({
       'success': True,
       'categories': {category.id: category.type for category in categories}
@@ -60,8 +58,6 @@ def create_app(test_config=None):
     start = (page - 1) * QUESTIONS_PER_PAGE
     end = start + QUESTIONS_PER_PAGE
     questions = Question.query.order_by(Question.id).all()
-    if len(questions) == 0:
-      return abort(404)
     return jsonify({
       'success': True,
       'questions': [question.format() for question in questions[start:end]],
@@ -118,7 +114,7 @@ def create_app(test_config=None):
     new_difficulty = body.get('difficulty', None)
     new_category = body.get('category', None)
     if new_question is None or new_answer is None or new_difficulty is None or new_category is None:
-      return abort(400)
+      abort(400)
     question = Question(question=new_question, answer=new_answer, difficulty=new_difficulty, category=new_category)
     question.insert()
     return jsonify({
@@ -136,22 +132,8 @@ def create_app(test_config=None):
   only question that include that string within their question. 
   Try using the word "title" to start. 
   '''
-  # @app.route('/questions/search', methods=['POST'])
-  # def search_questions():
-  #   body = request.get_json()
-  #   search_term = body.get('searchTerm', None)
-  #   if search_term is None:
-  #     return abort(400)
-  #   questions = Question.query.filter(Question.question.ilike(f'%{search_term}%')).all()
-  #   if len(questions) == 0:
-  #     return abort(404)
-  #   return jsonify({
-  #     'success': True,
-  #     'questions': [question.format() for question in questions],
-  #     'totalQuestions': len(questions),
-  #     'currentCategory': None
-  #   })
-
+  # Has been implemented under the create_question function since they both use the same
+  # endpoint and method
 
   '''
   @TODO: 
@@ -164,8 +146,6 @@ def create_app(test_config=None):
   @app.route('/categories/<int:category_id>/questions')
   def get_questions_by_category(category_id):
     questions = Question.query.filter(Question.category == category_id).all()
-    if len(questions) == 0:
-      return abort(404)
     return jsonify({
       'success': True,
       'questions': [question.format() for question in questions],
@@ -191,14 +171,13 @@ def create_app(test_config=None):
     previous_questions = body.get('previous_questions', None)
     quiz_category = body.get('quiz_category', None)
     if previous_questions is None or quiz_category is None:
-      return abort(400)
+      abort(400)
     if quiz_category['type'] == 'click':
       questions = Question.query.all()
     else:
       questions = Question.query.filter(Question.category == quiz_category['id']).all()
-    if len(questions) == 0:
-      return abort(404)
     question = random.choice(questions)
+    
     while question.id in previous_questions:
       question = random.choice(questions)
     return jsonify({

@@ -16,7 +16,7 @@ def create_app(test_config=None):
   '''
   @TODO: Set up CORS. Allow '*' for origins. Delete the sample route after completing the TODOs
   '''
-  cors = CORS(app, resources={r"/api/*": {"origins": "*"}})
+  cors = CORS(app, resources={r"*": {"origins": "*"}})
 
   '''
   @TODO: Use the after_request decorator to set Access-Control-Allow
@@ -61,13 +61,13 @@ def create_app(test_config=None):
     end = start + QUESTIONS_PER_PAGE
     questions = Question.query.order_by(Question.id).all()
     if len(questions) == 0:
-      abort(404)
+      return abort(404)
     return jsonify({
       'success': True,
       'questions': [question.format() for question in questions[start:end]],
-      'total_questions': len(questions),
+      'totalQuestions': len(questions),
       'categories': {category.id: category.type for category in Category.query.order_by(Category.id).all()},
-      'current_category': None
+      'currentCategory': questions[0].category if questions else None
     })
 
   '''
@@ -81,7 +81,7 @@ def create_app(test_config=None):
   def delete_question(question_id):
     question = Question.query.filter(Question.id == question_id).one_or_none()
     if question is None:
-      abort(404)
+      return abort(404)
     else:
       question.delete()
       return jsonify({
@@ -103,12 +103,22 @@ def create_app(test_config=None):
   @app.route('/questions', methods=['POST'])
   def create_question():
     body = request.get_json()
+    if 'searchTerm' in body:
+      search_term = body.get('searchTerm')
+      questions = Question.query.filter(Question.question.contains(search_term)).all()
+      return jsonify({
+        'success': True,
+        'questions': [question.format() for question in questions],
+        'totalQuestions': len(questions),
+        'currentCategory': questions[0].category if questions else None
+      })
+
     new_question = body.get('question', None)
     new_answer = body.get('answer', None)
     new_difficulty = body.get('difficulty', None)
     new_category = body.get('category', None)
     if new_question is None or new_answer is None or new_difficulty is None or new_category is None:
-      abort(400)
+      return abort(400)
     question = Question(question=new_question, answer=new_answer, difficulty=new_difficulty, category=new_category)
     question.insert()
     return jsonify({
@@ -126,21 +136,21 @@ def create_app(test_config=None):
   only question that include that string within their question. 
   Try using the word "title" to start. 
   '''
-  @app.route('/questions/search', methods=['POST'])
-  def search_questions():
-    body = request.get_json()
-    search_term = body.get('searchTerm', None)
-    if search_term is None:
-      abort(400)
-    questions = Question.query.filter(Question.question.ilike(f'%{search_term}%')).all()
-    if len(questions) == 0:
-      abort(404)
-    return jsonify({
-      'success': True,
-      'questions': [question.format() for question in questions],
-      'total_questions': len(questions),
-      'current_category': None
-    })
+  # @app.route('/questions/search', methods=['POST'])
+  # def search_questions():
+  #   body = request.get_json()
+  #   search_term = body.get('searchTerm', None)
+  #   if search_term is None:
+  #     return abort(400)
+  #   questions = Question.query.filter(Question.question.ilike(f'%{search_term}%')).all()
+  #   if len(questions) == 0:
+  #     return abort(404)
+  #   return jsonify({
+  #     'success': True,
+  #     'questions': [question.format() for question in questions],
+  #     'totalQuestions': len(questions),
+  #     'currentCategory': None
+  #   })
 
 
   '''
@@ -155,12 +165,12 @@ def create_app(test_config=None):
   def get_questions_by_category(category_id):
     questions = Question.query.filter(Question.category == category_id).all()
     if len(questions) == 0:
-      abort(404)
+      return abort(404)
     return jsonify({
       'success': True,
       'questions': [question.format() for question in questions],
-      'total_questions': len(questions),
-      'current_category': category_id
+      'totalQuestions': len(questions),
+      'currentCategory': category_id
     })
 
 
@@ -181,13 +191,13 @@ def create_app(test_config=None):
     previous_questions = body.get('previous_questions', None)
     quiz_category = body.get('quiz_category', None)
     if previous_questions is None or quiz_category is None:
-      abort(400)
+      return abort(400)
     if quiz_category['type'] == 'click':
       questions = Question.query.all()
     else:
       questions = Question.query.filter(Question.category == quiz_category['id']).all()
     if len(questions) == 0:
-      abort(404)
+      return abort(404)
     question = random.choice(questions)
     while question.id in previous_questions:
       question = random.choice(questions)

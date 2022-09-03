@@ -177,7 +177,7 @@ def create_app(test_config=None):
     else:
       questions = Question.query.filter(Question.category == quiz_category['id']).all()
     question = random.choice(questions)
-    
+
     while question.id in previous_questions:
       question = random.choice(questions)
     return jsonify({

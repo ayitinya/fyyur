@@ -77,7 +77,7 @@ def create_app(test_config=None):
   def delete_question(question_id):
     question = Question.query.filter(Question.id == question_id).one_or_none()
     if question is None:
-      return abort(404)
+      abort(404)
     else:
       question.delete()
       return jsonify({
@@ -102,19 +102,23 @@ def create_app(test_config=None):
     if 'searchTerm' in body:
       search_term = body.get('searchTerm')
       questions = Question.query.filter(Question.question.contains(search_term)).all()
-      return jsonify({
-        'success': True,
-        'questions': [question.format() for question in questions],
-        'totalQuestions': len(questions),
-        'currentCategory': questions[0].category if questions else None
-      })
+      # check if there are any questions that match the search term
+      if len(questions) == 0:
+        abort(404)
+      else:
+        return jsonify({
+          'success': True,
+          'questions': [question.format() for question in questions],
+          'totalQuestions': len(questions),
+          'currentCategory': questions[0].category if questions else None
+        })
 
     new_question = body.get('question', None)
     new_answer = body.get('answer', None)
     new_difficulty = body.get('difficulty', None)
     new_category = body.get('category', None)
     if new_question is None or new_answer is None or new_difficulty is None or new_category is None:
-      abort(400)
+      abort(422)
     question = Question(question=new_question, answer=new_answer, difficulty=new_difficulty, category=new_category)
     question.insert()
     return jsonify({
@@ -145,6 +149,9 @@ def create_app(test_config=None):
   '''
   @app.route('/categories/<int:category_id>/questions')
   def get_questions_by_category(category_id):
+    category = Category.query.filter(Category.id == category_id).one_or_none()
+    if category is None:
+      abort(404)
     questions = Question.query.filter(Question.category == category_id).all()
     return jsonify({
       'success': True,
@@ -171,7 +178,7 @@ def create_app(test_config=None):
     previous_questions = body.get('previous_questions', None)
     quiz_category = body.get('quiz_category', None)
     if previous_questions is None or quiz_category is None:
-      abort(400)
+      abort(422)
     if quiz_category['type'] == 'click':
       questions = Question.query.all()
     else:
@@ -197,6 +204,14 @@ def create_app(test_config=None):
       "error": 404,
       "message": "Not found"
     }), 404
+
+  @app.errorhandler(422)
+  def unprocessable(error):
+    return jsonify({
+      "success": False,
+      "error": 422,
+      "message": "Unprocessable"
+    }), 422
 
   return app
 

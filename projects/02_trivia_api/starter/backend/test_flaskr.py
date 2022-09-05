@@ -1,11 +1,8 @@
-import os
 import unittest
 import json
 from flask_sqlalchemy import SQLAlchemy
-
 from flaskr import create_app
 from models import setup_db, Question, Category
-
 
 class TriviaTestCase(unittest.TestCase):
     """This class represents the trivia test case"""
@@ -14,7 +11,7 @@ class TriviaTestCase(unittest.TestCase):
         """Define test variables and initialize app."""
         self.app = create_app()
         self.client = self.app.test_client
-        setup_db(self.app, os.getenv('DB_PATH'))
+        setup_db(self.app)
 
         # binds the app to the current context
         with self.app.app_context():
@@ -43,7 +40,6 @@ class TriviaTestCase(unittest.TestCase):
         self.assertTrue(len(data['questions']))
         self.assertTrue(data['categories'])
         self.assertTrue(data['currentCategory'])
-
 
    
     
@@ -116,13 +112,13 @@ class TriviaTestCase(unittest.TestCase):
         self.assertTrue(data['currentCategory'])
 
     #test delete question
-    # def test_delete_question(self):
-    #     res = self.client().delete('/questions/1')
-    #     data = json.loads(res.data)
+    def test_delete_question(self):
+        res = self.client().delete('/questions/1')
+        data = json.loads(res.data)
 
-    #     self.assertEqual(res.status_code, 200)
-    #     self.assertEqual(data['success'], True)
-    #     self.assertEqual(data['deleted'], 1)
+        self.assertEqual(res.status_code, 200)
+        self.assertEqual(data['success'], True)
+        self.assertEqual(data['deleted'], 1)
 
     # test quizzes
     def test_get_quizzes(self):
@@ -160,6 +156,60 @@ class TriviaTestCase(unittest.TestCase):
         self.assertTrue(data['totalQuestions'])
         self.assertTrue(len(data['questions']))
         self.assertTrue(data['currentCategory'])
+
+    # test retrieve categories failure scenario
+    def test_404_retrieve_categories(self):
+        res = self.client().get('/categories/1000')
+        data = json.loads(res.data)
+
+        self.assertEqual(res.status_code, 404)
+        self.assertEqual(data['success'], False)
+        self.assertEqual(data['message'], "Not found")
+
+    # test delete questions failure scenario
+    def test_404_delete_questions(self):
+        res = self.client().delete('/questions/1000')
+        data = json.loads(res.data)
+
+        self.assertEqual(res.status_code, 404)
+        self.assertEqual(data['success'], False)
+        self.assertEqual(data['message'], "Not found")
+
+    # test post questions failure scenario
+    def test_422_post_questions(self):
+        res = self.client().post('/questions', json={'category': '1', 'difficulty': '1'})
+        data = json.loads(res.data)
+
+        self.assertEqual(res.status_code, 422)
+        self.assertEqual(data['success'], False)
+        self.assertEqual(data['message'], "Unprocessable")
+    
+    # test post quizzes failure scenario
+    def test_422_post_quizzes(self):
+        res = self.client().post('/quizzes', json={})
+        data = json.loads(res.data)
+
+        self.assertEqual(res.status_code, 422)
+        self.assertEqual(data['success'], False)
+        self.assertEqual(data['message'], "Unprocessable")
+    
+    # test retrieve questions by category failure scenario
+    def test_404_retrieve_questions_by_category(self):
+        res = self.client().get('/categories/1000/questions')
+        data = json.loads(res.data)
+
+        self.assertEqual(res.status_code, 404)
+        self.assertEqual(data['success'], False)
+        self.assertEqual(data['message'], "Not found")
+    
+    # test get all questions with a search term failure scenario
+    def test_404_get_all_questions_search(self):
+        res = self.client().post('/questions', json={'searchTerm': 'asdfghj'})
+        data = json.loads(res.data)
+
+        self.assertEqual(res.status_code, 404)
+        self.assertEqual(data['success'], False)
+        self.assertEqual(data['message'], "Not found")
 
 # Make the tests conveniently executable
 if __name__ == "__main__":

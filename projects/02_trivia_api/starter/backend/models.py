@@ -3,7 +3,11 @@ from sqlalchemy import Column, String, Integer, create_engine
 from flask_sqlalchemy import SQLAlchemy
 import json
 
-database_name = os.getenv('DB_NAME', 'trivia')
+from dotenv import load_dotenv
+load_dotenv()
+
+
+database_name = os.getenv('DB_NAME')
 database_path = os.getenv('DB_PATH')
 
 db = SQLAlchemy()

@@ -28,6 +28,18 @@ CORS(app)
     returns status code 200 and json {"success": True, "drinks": drinks} where drinks is the list of drinks
         or appropriate status code indicating reason for failure
 '''
+@app.route('/drinks')
+def get_drinks():
+    try:
+        drinks = Drink.query.all()
+        return jsonify(
+            {
+                'success': True,
+                'drinks': [drink.short() for drink in drinks]
+            }, 200
+        )
+    except:
+        abort(404)
 
 
 '''
@@ -38,7 +50,19 @@ CORS(app)
     returns status code 200 and json {"success": True, "drinks": drinks} where drinks is the list of drinks
         or appropriate status code indicating reason for failure
 '''
-
+@app.route('/drinks-detail')
+@requires_auth('get:drinks-detail')
+def get_drinks_detail():
+    try:
+        drinks = Drink.query.all()
+        return jsonify(
+            {
+                'success': True,
+                'drinks': [drink.long() for drink in drinks]
+            }, 200
+        )
+    except:
+        abort(404)
 
 '''
 @TODO implement endpoint
@@ -49,6 +73,23 @@ CORS(app)
     returns status code 200 and json {"success": True, "drinks": drink} where drink an array containing only the newly created drink
         or appropriate status code indicating reason for failure
 '''
+@app.route('/drinks', methods=['POST'])
+@requires_auth('post:drinks')
+def create_drink():
+    body = request.get_json()
+    title = body.get('title', None)
+    recipe = body.get('recipe', None)
+    try:
+        drink = Drink(title=title, recipe=json.dumps(recipe))
+        drink.insert()
+        return jsonify(
+            {
+                'success': True,
+                'drinks': [drink.long()]
+            }, 200
+        )
+    except:
+        abort(422)
 
 
 '''
@@ -62,6 +103,27 @@ CORS(app)
     returns status code 200 and json {"success": True, "drinks": drink} where drink an array containing only the updated drink
         or appropriate status code indicating reason for failure
 '''
+@app.route('/drinks/<int:id>', methods=['PATCH'])
+@requires_auth('patch:drinks')
+def update_drink(id):
+    drink = Drink.query.filter(Drink.id == id).one_or_none()
+    if drink is None:
+        abort(404)
+    body = request.get_json()
+    title = body.get('title', None)
+    recipe = body.get('recipe', None)
+    try:
+        drink.title = title
+        drink.recipe = json.dumps(recipe)
+        drink.update()
+        return jsonify(
+            {
+                'success': True,
+                'drinks': [drink.long()]
+            }, 200
+        )
+    except:
+        abort(422)
 
 
 '''
@@ -74,6 +136,22 @@ CORS(app)
     returns status code 200 and json {"success": True, "delete": id} where id is the id of the deleted record
         or appropriate status code indicating reason for failure
 '''
+@app.route('/drinks/<int:id>', methods=['DELETE'])
+@requires_auth('delete:drinks')
+def delete_drink(id):
+    drink = Drink.query.filter(Drink.id == id).one_or_none()
+    if drink is None:
+        abort(404)
+    try:
+        drink.delete()
+        return jsonify(
+            {
+                'success': True,
+                'delete': id
+            }, 200
+        )
+    except:
+        abort(422)
 
 
 # Error Handling
@@ -101,17 +179,38 @@ def unprocessable(error):
                     }), 404
 
 '''
+@app.errorhandler(404)
+def not_found(error):
+    return jsonify({
+        "success": False,
+        "error": 404,
+        "message": "resource not found"
+    }), 404
 
 '''
 @TODO implement error handler for 404
     error handler should conform to general task above
 '''
+@app.errorhandler(400)
+def bad_request(error):
+    return jsonify({
+        "success": False,
+        "error": 400,
+        "message": "bad request"
+    }), 400
 
 
 '''
 @TODO implement error handler for AuthError
     error handler should conform to general task above
 '''
+@app.errorhandler(AuthError)
+def auth_error(error):
+    return jsonify({
+        "success": False,
+        "error": error.status_code,
+        "message": error.error['description']
+    }), error.status_code
 
 if __name__ == "__main__":
     app.debug = True
